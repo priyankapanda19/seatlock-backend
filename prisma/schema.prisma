@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  isActive     Boolean  @default(true)
+
+  refreshTokens RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  capacity  Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events Event[]
+
+  @@index([city])
+  @@index([isActive])
+}
+
+//events
+
+enum EventStatus {
+  UPCOMING
+  OPEN
+  SOLD_OUT
+  CANCELLED
+  COMPLETED
+}
+
+//seat schema
+enum SeatStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+  BLOCKED
+}
+
+model Seat {
+  id         String     @id @default(cuid())
+  eventId    String
+  rowNumber  String
+  seatNumber Int
+  category   String
+  price      Decimal    @db.Decimal(10, 2)
+  status     SeatStatus @default(AVAILABLE)
+  version    Int        @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, rowNumber, seatNumber])
+  @@index([eventId])
+  @@index([eventId, status])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  venueId     String
+  name        String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  status      EventStatus @default(UPCOMING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venue Venue  @relation(fields: [venueId], references: [id])
+  seats Seat[]
+
+  @@index([venueId])
+  @@index([startTime])
+  @@index([status])
+}
